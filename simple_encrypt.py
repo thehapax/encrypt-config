@@ -51,7 +51,7 @@ def decrypt_file(input_passwd, cipher_text):
 def test_encrypt(input_passwd, config_filename):
     # get real api keys from subdir for testing
     config_dir = os.path.join(os.getcwd(), 'safe')
-    # temporary, need to fix
+    # temporary, need to fix above, just for testing.
     filepath = os.path.join(config_dir, config_filename)
 
     with open(filepath, 'rb') as config_file:

@@ -1,14 +1,16 @@
 import logging
 from getpass import getpass
 from configparser import ConfigParser, NoOptionError
+
+from simple_encrypt import test_encrypt, test_decrypt
 import ccxt
+
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(message)s'
 )
-
 
 def get_exchange_config(content):
     try:
@@ -18,7 +20,6 @@ def get_exchange_config(content):
     except Exception as e:
         log.error(e)
         pass
-
 
 def get_exchange(parser):
     # only accept API keys for these ccxt exchanges, cross check here.
@@ -59,8 +60,9 @@ if __name__ == "__main__":
     test_encrypt(input_passwd, config_file) # test encrypt to file
     plain_text = test_decrypt(input_passwd, "enc_"+config_file) # test decrypt to file
 
-    parser = get_exchange_config(plain_text)
-    ccxt_ex = get_exchange(parser)
+    if plain_text is not None:
+        parser = get_exchange_config(plain_text)
+        ccxt_ex = get_exchange(parser)
 
 #    log.info(ccxt_ex.fetch_free_balance())  # test activity of ccxt exchange
 
