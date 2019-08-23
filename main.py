@@ -101,11 +101,10 @@ def test_exchange_config_two():
     if plain_text is not None:
         parser = get_exchange_config(plain_text)
         for section_name in parser.sections():
-
-            if parser.get(section_name, 'strategy-type')  == 'simple':
+            if parser.get(section_name, 'strategy-type') == 'simple':
                 ccxt_ex = get_by_strategy_name(section_name, parser)
                 return ccxt_ex
-            elif parser.has_option(section_name, 'strategy-type') ==  'triangular':
+            elif parser.has_option(section_name, 'strategy-type') == 'triangular':
                 return None
     else:
         return None
