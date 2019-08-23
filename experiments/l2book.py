@@ -47,8 +47,10 @@ if __name__ == '__main__':
     l2_ob = get_test_l2ob(symbol)
     ob_df = plot_orderbook(l2_ob)
 
-#    ob_df = plot_orderbook(l2) # static orderbook for testing
+# bitshares order engine.  get_market_orders (or use pyBitshares direct)
 
+
+#    ob_df = plot_orderbook(l2) # static orderbook for testing
 # Useful https://robertmitchellv.com/blog-bar-chart-annotations-pandas-mpl.html
 # https://stackoverflow.com/questions/13187778/convert-pandas-dataframe-to-numpy-array
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.bar.html
