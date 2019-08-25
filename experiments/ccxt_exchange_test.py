@@ -55,6 +55,7 @@ def get_test_l2ob(symbol):
     ccxt_ex = get_exchange(config_sections)
 
     # log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
+    # print(ccxt_ex.fetch_free_balance())
 
     l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
     return l2_ob
