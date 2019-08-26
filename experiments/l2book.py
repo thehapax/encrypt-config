@@ -6,7 +6,7 @@ from ccxt_exchange_test import get_test_l2ob
 
 from bitshares import BitShares
 from bitshares.market import Market
-
+import time
 
 def plot_orderbook(l2):
     # get order book and visualize quickly with matplotlib.
@@ -40,12 +40,12 @@ def plot_orderbook(l2):
 
     # use python 3.7, error with python 3.6.8
     # plt.bar(ob_df.price, ob_df.vol, color=ob_df.colors)
-   # plt.show()
-
+    # plt.show()
     return ob_df
 
+
 if __name__ == '__main__':
-    # CEX orderbook
+    # CEX orderbook from cointiger
 
     #symbol = 'BTC/USDT'
     #symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
@@ -61,34 +61,49 @@ if __name__ == '__main__':
 
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
     bs_symbol = "BTS:OPEN.BTC"
+    #bs_symbol = "OPEN.BTC:BTS"
+
     bs_market = Market(bs_symbol)
     print(bs_market.ticker())
 
- #   bs_limit_orders = bs_market.get_limit_orders(limit=25)
- #   print("Bitshares limit orders: ")
-   # print(bs_limit_orders)
-
-  #  for item in bs_limit_orders:
-  #      print(item, bs_limit_orders[item])
-
     print("================")
 
-# {'bids': [0.003679 USD/BTS (1.9103 USD|519.29602 BTS)
+    # {'bids': [0.003679 USD/BTS (1.9103 USD|519.29602 BTS)
     # get bitshares order book for current market
-    bs_orderbook = bs_market.orderbook(limit=10)
+    bs_orderbook = bs_market.orderbook(limit=5)
     # print("Bitshares Order book for ")
     print(bs_orderbook)
 
     print("=====================")
 
+    price_vol = list()
     for i in range(len(bs_orderbook['asks'])):
-        asks = bs_orderbook['asks'][i]
-        print(asks['price'])
-        print(asks.symbols())
-        print(asks.values())
+        #price = bs_orderbook['asks'][i]['price']
+        price = bs_orderbook['asks'][i].get('price')
+        print(price)
+        invert_price = 1/price
+        vol = bs_orderbook['asks'][i]['quote']  # is this the actual volume?
+        price_vol.append([price, invert_price, vol['amount']])
 
+    ask_df = pd.DataFrame(price_vol)
+    ask_df.columns = ['price', 'invert', 'vol']
+    ask_df['timestamp'] = int(time.time())
+    ask_df['type'] = 'ask'
+
+    price_vol = list()
     for j in range(len(bs_orderbook['bids'])):
-        bids = bs_orderbook['bids'][i]
+        price = bs_orderbook['bids'][j]['price']
+        invert_price = 1/price
+        vol = bs_orderbook['bids'][j]['quote']  # is this the actual volume?
+        price_vol.append([price, invert_price, vol['amount']])
+
+    bid_df = pd.DataFrame(price_vol)
+    bid_df.columns = ['price', 'invert', 'vol']
+    bid_df['timestamp'] = int(time.time())
+    bid_df['type'] = 'bid'
+
+    bts_df = pd.concat([ask_df, bid_df])
+    print(bts_df)
 
 
 #    ob_df = plot_orderbook(l2) # static orderbook for testing

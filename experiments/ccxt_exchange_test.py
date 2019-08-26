@@ -63,7 +63,8 @@ def get_test_l2ob(symbol):
 
 if __name__ == '__main__':
 
-    symbol = 'BTC/USDT'
+#    symbol = 'BTC/USDT'
+    symbol = 'BTS/BTC'
     log.info("symbol: {} ".format(symbol))
     l2_ob = get_test_l2ob(symbol)
     print(l2_ob)
