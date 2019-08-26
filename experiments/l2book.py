@@ -1,112 +1,106 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from tabulate import tabulate
-from static_ob import l2
 from ccxt_exchange_test import get_test_l2ob
+from static_ob import l2
 
-from bitshares import BitShares
 from bitshares.market import Market
 import time
 
-def plot_orderbook(l2):
+def plot_orderbook(ob_df):
     # get order book and visualize quickly with matplotlib.
     plt.style.use('ggplot')
+
+    ob_df['colors'] = 'g'
+    ob_df.loc[ob_df.type == 'asks', 'colors'] = 'r'
+
+    # for use with python 3.6.8
+    price = ob_df.price.to_numpy()
+    vol = ob_df.vol.to_numpy()
+    invert = ob_df.invert.to_numpy()
+   # plt.bar(invert, vol, color=ob_df.colors)
+    plt.bar(price, vol, color=ob_df.colors)
+
+    # use python 3.7, error with python 3.6.8
+    # plt.bar(ob_df.price, ob_df.vol, color=ob_df.colors)
+    return plt
+
+
+def get_cex_data(l2):
     # let ob stand for orderbook, ob_depth is the order book depth we want to map out
     ob_depth = 10
 
     bids = l2['bids']
     bid_df = pd.DataFrame(bids)
     bid_df.columns = ['price', 'vol']
+    bid_df['invert'] = 1/bid_df['price']
     bid_df['timestamp'] = l2['timestamp']
-    bid_df['type'] = 'bid'
+    bid_df['type'] = 'bids'
 
     ask = l2['asks']
     ask_df = pd.DataFrame(ask)
     ask_df.columns = ['price', 'vol']
+    ask_df['invert'] = 1/ask_df['price']
     ask_df['timestamp'] = l2['timestamp']
-    ask_df['type'] = 'ask'
+    ask_df['type'] = 'asks'
 
     ob_df = pd.concat([ask_df.head(ob_depth), bid_df.head(ob_depth)])
     ob_df.sort_values('price', inplace=True, ascending=False)
     print(tabulate(ob_df, headers="keys"))
-
-    ob_df['colors'] = 'g'
-    ob_df.loc[ob_df.type=='ask', 'colors'] = 'r'
-
-    # for use with python 3.6.8
-    price = ob_df.price.to_numpy()
-    vol = ob_df.vol.to_numpy()
-    #plt.bar(price, vol, color=ob_df.colors)
-
-    # use python 3.7, error with python 3.6.8
-    # plt.bar(ob_df.price, ob_df.vol, color=ob_df.colors)
-    # plt.show()
     return ob_df
+
+
+def get_bts_orderbook_df(ob, type):
+    price_vol = list()
+    for i in range(len(ob[type])):
+        price = ob[type][i]['price']
+        invert_price = 1/price
+        vol = ob[type][i]['quote']
+        vol2 = ob[type][i]['base']  # is this the actual volume?
+        price_vol.append([price, vol['amount'], vol2['amount'], invert_price])
+
+    df = pd.DataFrame(price_vol)
+    df.columns = ['price', 'vol', 'vol_base', 'invert']
+    df['timestamp'] = int(time.time())
+    df['type'] = type
+    return df
+
+
+def get_bts_ob_data(bs_symbol):
+    bs_market = Market(bs_symbol)
+    # get bitshares order book for current market
+    bs_orderbook = bs_market.orderbook(limit=10)
+    ask_df = get_bts_orderbook_df(bs_orderbook, 'asks')
+    bid_df = get_bts_orderbook_df(bs_orderbook, 'bids')
+    bts_df = pd.concat([ask_df, bid_df])
+    bts_df.sort_values('price', inplace=True, ascending=False)
+    print(tabulate(bts_df, headers="keys"))
+    return bts_df
 
 
 if __name__ == '__main__':
     # CEX orderbook from cointiger
-
-    #symbol = 'BTC/USDT'
+    symbol = 'BTC/USDT'
     #symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
-    symbol = 'BTS/BTC'
 
-#    l2_ob = get_test_l2ob(symbol)
-#    ob_df = plot_orderbook(l2_ob)
-
-    # bitshares DEX
-    bs = BitShares()
-    bs.wallet.unlock("hellobot123")
-    print(bs.wallet.getPublicKeys(current=True))
+    #symbol = 'BTS/BTC'
+    l2_ob = get_test_l2ob(symbol)
+    cex_df = get_cex_data(l2_ob)
+    #cex_df = get_cex_data(l2) # static data
 
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
-    bs_symbol = "BTS:OPEN.BTC"
-    #bs_symbol = "OPEN.BTC:BTS"
+#    bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
+    bs_symbol = "OPEN.BTC/USD"
+    bts_df = get_bts_ob_data(bs_symbol)
 
-    bs_market = Market(bs_symbol)
-    print(bs_market.ticker())
+    cex_plt = plot_orderbook(cex_df)
+    cex_plt.title("cex cointiger")
+    cex_plt.show()
 
-    print("================")
+    bts_plt = plot_orderbook(bts_df)
+    bts_plt.title("bitshares dex")
+    bts_plt.show()
 
-    # {'bids': [0.003679 USD/BTS (1.9103 USD|519.29602 BTS)
-    # get bitshares order book for current market
-    bs_orderbook = bs_market.orderbook(limit=5)
-    # print("Bitshares Order book for ")
-    print(bs_orderbook)
-
-    print("=====================")
-
-    price_vol = list()
-    for i in range(len(bs_orderbook['asks'])):
-        #price = bs_orderbook['asks'][i]['price']
-        price = bs_orderbook['asks'][i].get('price')
-        print(price)
-        invert_price = 1/price
-        vol = bs_orderbook['asks'][i]['quote']  # is this the actual volume?
-        price_vol.append([price, invert_price, vol['amount']])
-
-    ask_df = pd.DataFrame(price_vol)
-    ask_df.columns = ['price', 'invert', 'vol']
-    ask_df['timestamp'] = int(time.time())
-    ask_df['type'] = 'ask'
-
-    price_vol = list()
-    for j in range(len(bs_orderbook['bids'])):
-        price = bs_orderbook['bids'][j]['price']
-        invert_price = 1/price
-        vol = bs_orderbook['bids'][j]['quote']  # is this the actual volume?
-        price_vol.append([price, invert_price, vol['amount']])
-
-    bid_df = pd.DataFrame(price_vol)
-    bid_df.columns = ['price', 'invert', 'vol']
-    bid_df['timestamp'] = int(time.time())
-    bid_df['type'] = 'bid'
-
-    bts_df = pd.concat([ask_df, bid_df])
-    print(bts_df)
-
-
-#    ob_df = plot_orderbook(l2) # static orderbook for testing
 # Useful https://robertmitchellv.com/blog-bar-chart-annotations-pandas-mpl.html
 # https://stackoverflow.com/questions/13187778/convert-pandas-dataframe-to-numpy-array
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.bar.html
