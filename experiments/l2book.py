@@ -3,13 +3,14 @@ import pandas as pd
 from tabulate import tabulate
 from ccxt_exchange_test import get_test_l2ob
 from static_ob import l2
-
 from bitshares.market import Market
 import time
+
 
 def plot_orderbook(ob_df):
     # get order book and visualize quickly with matplotlib.
     plt.style.use('ggplot')
+    bar_width = 100
 
     ob_df['colors'] = 'g'
     ob_df.loc[ob_df.type == 'asks', 'colors'] = 'r'
@@ -17,18 +18,19 @@ def plot_orderbook(ob_df):
     # for use with python 3.6.8
     price = ob_df.price.to_numpy()
     vol = ob_df.vol.to_numpy()
-    invert = ob_df.invert.to_numpy()
-   # plt.bar(invert, vol, color=ob_df.colors)
-    plt.bar(price, vol, color=ob_df.colors)
+    invert = ob_df.invert.to_numpy() # use if needed
 
-    # use python 3.7, error with python 3.6.8
+    plt.bar(invert, vol , color=ob_df.colors, width=bar_width)
+    #plt.bar(price, vol, color=ob_df.colors, width=bar_width)
+
+    # use below if python 3.7, error with python 3.6.8
     # plt.bar(ob_df.price, ob_df.vol, color=ob_df.colors)
     return plt
 
 
-def get_cex_data(l2):
+def get_cex_data(l2, depth: int):
     # let ob stand for orderbook, ob_depth is the order book depth we want to map out
-    ob_depth = 10
+    #depth = 1
 
     bids = l2['bids']
     bid_df = pd.DataFrame(bids)
@@ -44,7 +46,7 @@ def get_cex_data(l2):
     ask_df['timestamp'] = l2['timestamp']
     ask_df['type'] = 'asks'
 
-    ob_df = pd.concat([ask_df.head(ob_depth), bid_df.head(ob_depth)])
+    ob_df = pd.concat([ask_df.head(depth), bid_df.head(depth)])
     ob_df.sort_values('price', inplace=True, ascending=False)
     print(tabulate(ob_df, headers="keys"))
     return ob_df
@@ -66,10 +68,10 @@ def get_bts_orderbook_df(ob, type):
     return df
 
 
-def get_bts_ob_data(bs_symbol):
+def get_bts_ob_data(bs_symbol, depth: int):
     bs_market = Market(bs_symbol)
     # get bitshares order book for current market
-    bs_orderbook = bs_market.orderbook(limit=10)
+    bs_orderbook = bs_market.orderbook(limit=depth)
     ask_df = get_bts_orderbook_df(bs_orderbook, 'asks')
     bid_df = get_bts_orderbook_df(bs_orderbook, 'bids')
     bts_df = pd.concat([ask_df, bid_df])
@@ -77,29 +79,39 @@ def get_bts_ob_data(bs_symbol):
     print(tabulate(bts_df, headers="keys"))
     return bts_df
 
+def plot_df(df, title: str, symbol: str):
+    plt = plot_orderbook(df)
+    plt.title(title + ":"+ symbol)
+    plt.ylabel('volume')
+    plt.xlabel('price')
+    plt.show()
+
 
 if __name__ == '__main__':
     # CEX orderbook from cointiger
     symbol = 'BTC/USDT'
     #symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
 
-    #symbol = 'BTS/BTC'
+    symbol = 'BTS/BTC'
     l2_ob = get_test_l2ob(symbol)
-    cex_df = get_cex_data(l2_ob)
+    cex_df = get_cex_data(l2_ob, depth=3)
     #cex_df = get_cex_data(l2) # static data
+    plot_df(cex_df, title="cex cointiger", symbol=symbol)
+
 
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
-#    bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
-    bs_symbol = "OPEN.BTC/USD"
-    bts_df = get_bts_ob_data(bs_symbol)
+    bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
+#    bs_symbol = "OPEN.BTC/USD"
+    bts_df = get_bts_ob_data(bs_symbol, depth=3)
 
-    cex_plt = plot_orderbook(cex_df)
-    cex_plt.title("cex cointiger")
-    cex_plt.show()
-
+    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol)
+    """
     bts_plt = plot_orderbook(bts_df)
     bts_plt.title("bitshares dex")
+    bts_plt.ylabel('volume')
+    bts_plt.xlabel('price')
     bts_plt.show()
+    """
 
 # Useful https://robertmitchellv.com/blog-bar-chart-annotations-pandas-mpl.html
 # https://stackoverflow.com/questions/13187778/convert-pandas-dataframe-to-numpy-array
