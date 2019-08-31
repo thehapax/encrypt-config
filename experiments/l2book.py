@@ -9,10 +9,12 @@ from bitshares.market import Market
 import time
 
 
-def plot_orderbook(ob_df, invert: bool):
+def plot_orderbook(ob_df, invert: bool, bar_width: float):
     # get order book and visualize quickly with matplotlib.
     plt.style.use('ggplot')
-    bar_width = 100
+    bar_width = bar_width
+    if bar_width is None:
+        bar_width = 0.3
 
     ob_df['colors'] = 'g'
     ob_df.loc[ob_df.type == 'asks', 'colors'] = 'r'
@@ -83,8 +85,8 @@ def get_bts_ob_data(bs_symbol, depth: int):
     return bts_df
 
 
-def plot_df(df, title: str, symbol: str, invert: bool):
-    plt = plot_orderbook(df, invert=invert)
+def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
+    plt = plot_orderbook(df, invert=invert, bar_width=bar_width)
     plt.title(title + ":"+ symbol)
     plt.ylabel('volume')
     plt.xlabel('price')
@@ -94,20 +96,22 @@ if __name__ == '__main__':
     symbol = 'BTC/USDT'
     #symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
 
+    depth = 5
     #symbol = 'BTS/BTC'
     l2_ob = get_test_l2ob(symbol)
-    cex_df = get_cex_data(l2_ob, depth=3)
+    cex_df = get_cex_data(l2_ob, depth=depth)
     #cex_df = get_cex_data(l2) # static data
-    plt.figure(1)
-    plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False)
+    plt.subplot(2,1,1)
+    plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
 
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
     #bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
     bs_symbol = "OPEN.BTC/USD"
-    bts_df = get_bts_ob_data(bs_symbol, depth=3)
-    plt.figure(2)
-    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False)
+    bts_df = get_bts_ob_data(bs_symbol, depth=depth)
+    plt.subplot(2,1,2)
+    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=10)
 
+    plt.tight_layout()
     plt.show()
     input()
 
