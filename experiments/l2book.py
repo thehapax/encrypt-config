@@ -7,14 +7,30 @@ from ccxt_exchange_test import get_test_l2ob
 from static_ob import l2
 from bitshares.market import Market
 import time
+import logging
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
+
+#plot_style = 'horizontal'
+plot_style = 'vertical'
+
+def plot_h(plt, price, vol, bwidth, colors, align):
+    plt.barh(price, vol, bwidth, color=colors, align=align)
+
+def plot_v(plt, price, vol, bwidth, colors, align):
+    plt.bar(price, vol, bwidth, color=colors, align=align)
 
 
-def plot_orderbook(ob_df, invert: bool, bar_width: float):
+def plot_orderbook(ob_df, invert: bool, barwidth: float):
     # get order book and visualize quickly with matplotlib.
     plt.style.use('ggplot')
-    bar_width = bar_width
-    if bar_width is None:
-        bar_width = 0.3
+    bwidth = barwidth
+    if bwidth is None:
+        bwidth = 0.1
 
     ob_df['colors'] = 'g'
     ob_df.loc[ob_df.type == 'asks', 'colors'] = 'r'
@@ -24,10 +40,14 @@ def plot_orderbook(ob_df, invert: bool, bar_width: float):
     vol = ob_df.vol.to_numpy()
     invert_price = ob_df.invert.to_numpy()  # use if needed
 
+    plot_price = price
     if invert is True:
-        plt.bar(invert_price, vol, color=ob_df.colors, width=bar_width)
+        plot_price = invert_price
+
+    if plot_style is 'horizontal':
+        plot_h(plt, plot_price, vol, bwidth, ob_df.colors, 'center')
     else:
-        plt.bar(price, vol, color=ob_df.colors, width=bar_width)
+        plot_v(plt, plot_price, vol, bwidth, ob_df.colors, 'center')
 
     # use below if python 3.7, error with python 3.6.8
     # plt.bar(ob_df.price, ob_df.vol, color=ob_df.colors)
@@ -86,7 +106,7 @@ def get_bts_ob_data(bs_symbol, depth: int):
 
 
 def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
-    plt = plot_orderbook(df, invert=invert, bar_width=bar_width)
+    plt = plot_orderbook(df, invert=invert, barwidth=bar_width)
     plt.title(title + ":"+ symbol)
     plt.ylabel('volume')
     plt.xlabel('price')
@@ -98,9 +118,9 @@ if __name__ == '__main__':
 
     depth = 5
     #symbol = 'BTS/BTC'
-    l2_ob = get_test_l2ob(symbol)
-    cex_df = get_cex_data(l2_ob, depth=depth)
-    #cex_df = get_cex_data(l2) # static data
+#    l2_ob = get_test_l2ob(symbol)
+#    cex_df = get_cex_data(l2_ob, depth=depth)
+    cex_df = get_cex_data(l2, depth=depth) # static data
     plt.subplot(2,1,1)
     plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
 
@@ -109,7 +129,7 @@ if __name__ == '__main__':
     bs_symbol = "OPEN.BTC/USD"
     bts_df = get_bts_ob_data(bs_symbol, depth=depth)
     plt.subplot(2,1,2)
-    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=10)
+    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=20)
 
     plt.tight_layout()
     plt.show()
