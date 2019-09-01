@@ -8,6 +8,7 @@ from static_ob import l2
 from bitshares.market import Market
 import time
 import logging
+import json
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -102,6 +103,7 @@ def get_bts_ob_data(bs_symbol, depth: int):
     bts_df = pd.concat([ask_df, bid_df])
     bts_df.sort_values('price', inplace=True, ascending=False)
     print(tabulate(bts_df, headers="keys"))
+#    bts_df.to_csv("static-bts-ob.csv")
     return bts_df
 
 
@@ -111,6 +113,12 @@ def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
     plt.ylabel('volume')
     plt.xlabel('price')
 
+
+def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
+    log.info("Calculate Arbitrage Opportunity")
+
+
+
 if __name__ == '__main__':
     # CEX orderbook from cointiger
     symbol = 'BTC/USDT'
@@ -118,22 +126,36 @@ if __name__ == '__main__':
 
     depth = 5
     #symbol = 'BTS/BTC'
-#    l2_ob = get_test_l2ob(symbol)
-#    cex_df = get_cex_data(l2_ob, depth=depth)
-    cex_df = get_cex_data(l2, depth=depth) # static data
+#    l2_ob = get_test_l2ob(symbol) # dynamic data
+#    cex_df = get_cex_data(l2_ob, depth=depth) # dynamic data
+#    cex_df = get_cex_data(l2, depth=depth) # static data
+
+    """ get static data from file """
+  #  static_cex = None
+    with open('cex_ob.txt', 'r') as f:
+        static_cex = json.loads(f.read())
+    cex_df = get_cex_data(static_cex, depth=depth)  # static data
+
     plt.subplot(2,1,1)
     plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
 
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
     #bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
     bs_symbol = "OPEN.BTC/USD"
-    bts_df = get_bts_ob_data(bs_symbol, depth=depth)
+    bts_df = pd.read_csv('static_bts.csv') # static bts data
+    print(bts_df)
+    #    bts_df = get_bts_ob_data(bs_symbol, depth=depth)
+
     plt.subplot(2,1,2)
-    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=20)
+    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=10)
+
+    calculate_arb_opp(cex_df, bts_df)
+
 
     plt.tight_layout()
     plt.show()
     input()
+
 
 
 # Useful https://robertmitchellv.com/blog-bar-chart-annotations-pandas-mpl.html

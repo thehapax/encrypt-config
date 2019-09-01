@@ -2,6 +2,7 @@ import logging
 import os
 import configparser
 import ccxt
+import json
 
 """
     Temporary informal unit test for ccxt exchange
@@ -56,19 +57,32 @@ def get_test_l2ob(symbol):
 
     # log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
     # print(ccxt_ex.fetch_free_balance())
-
     l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
     return l2_ob
 
 
+def write_dict(l2_ob, file_name):
+    with open(file_name, 'w') as f:
+        s = f.write(json.dumps(l2_ob))
+
+
+def read_dict(file_name):
+    with open(file_name, 'r') as f:
+        static_ob = json.loads(f.read())
+    return static_ob
+
+
 if __name__ == '__main__':
 
-#    symbol = 'BTC/USDT'
-    symbol = 'BTS/BTC'
+    symbol = 'BTC/USDT'
+#    symbol = 'BTS/BTC'
     log.info("symbol: {} ".format(symbol))
     l2_ob = get_test_l2ob(symbol)
-    print(l2_ob)
 
+    file_name = 'cex_ob.txt'
+    write_dict(l2_ob, file_name)
+    static_ob = read_dict(file_name)
+    print(static_ob)
 
     """
     ccxt_ex.fetch_free_balance()
