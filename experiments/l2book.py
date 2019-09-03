@@ -3,7 +3,7 @@ from matplotlib import interactive
 
 import pandas as pd
 from tabulate import tabulate
-from ccxt_exchange_test import get_test_l2ob
+from ccxt_exchange_test import get_test_l2ob, read_dict
 from static_ob import l2
 from bitshares.market import Market
 import time
@@ -74,7 +74,8 @@ def get_cex_data(l2, depth: int):
 
     ob_df = pd.concat([ask_df.head(depth), bid_df.head(depth)])
     ob_df.sort_values('price', inplace=True, ascending=False)
-    print(tabulate(ob_df, headers="keys"))
+#   print("------- cex data --------")
+#   print(tabulate(ob_df, headers="keys"))
     return ob_df
 
 
@@ -107,6 +108,25 @@ def get_bts_ob_data(bs_symbol, depth: int):
     return bts_df
 
 
+def get_bts_static_ob_data(df, depth: int):
+    print("-------- Entire Static BTS Orderbook DF ------------")
+    print(tabulate(df, headers="keys"))
+    ask_df = df[df['type'] == 'asks']
+    bid_df = df[df['type'] == 'bids']
+    ask_head = ask_df.tail(depth)
+    bid_head = bid_df.head(depth)
+#    print("-------- head of ask and bid --------")
+#    print(ask_head)
+#    print(bid_head)
+    ask_head = ask_head.sort_values(by='price', ascending=True)
+    bid_head = bid_head.sort_values(by='price')
+#    print(" ------ spread inner orders -------")
+#    print(ask_head)
+#    print(bid_head)
+    complete_df = pd.concat([ask_head, bid_head])
+    return complete_df
+
+
 def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
     plt = plot_orderbook(df, invert=invert, barwidth=bar_width)
     plt.title(title + ":"+ symbol)
@@ -116,6 +136,13 @@ def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
 
 def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     log.info("Calculate Arbitrage Opportunity")
+    # look at lowest ask and highest bid
+    # if dex ask price is > cex ask,  take cex ask and sell on dex. (account for fees)
+    # assumes spread on cex is narrower than dex
+    #
+    # bids? if cex bid > dex bid, take cex bid and list bid on dex. (+ fees)
+    # calculate vwap? and/or MVWAP?
+
 
 
 
@@ -131,26 +158,28 @@ if __name__ == '__main__':
 #    cex_df = get_cex_data(l2, depth=depth) # static data
 
     """ get static data from file """
-  #  static_cex = None
-    with open('cex_ob.txt', 'r') as f:
-        static_cex = json.loads(f.read())
+    file_name = 'cex_ob.txt'
+    static_cex = read_dict(file_name)
     cex_df = get_cex_data(static_cex, depth=depth)  # static data
 
     plt.subplot(2,1,1)
     plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
-
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
     #bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
     bs_symbol = "OPEN.BTC/USD"
     bts_df = pd.read_csv('static_bts.csv') # static bts data
-    print(bts_df)
-    #    bts_df = get_bts_ob_data(bs_symbol, depth=depth)
+    bts_spread_df = get_bts_static_ob_data(bts_df, 1)
+    print("----- bts spread df ------")
+    print(bts_spread_df)
+    cex_spread_df = get_cex_data(static_cex, depth=1)
+    print("----- cex spread df ------")
+    print(cex_spread_df)
 
+#   bts_df = get_bts_ob_data(bs_symbol, depth=depth)
     plt.subplot(2,1,2)
     plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=10)
 
     calculate_arb_opp(cex_df, bts_df)
-
 
     plt.tight_layout()
     plt.show()
