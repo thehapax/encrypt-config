@@ -141,7 +141,40 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     # assumes spread on cex is narrower than dex
     #
     # bids? if cex bid > dex bid, take cex bid and list bid on dex. (+ fees)
-    # calculate vwap? and/or MVWAP?
+    # calculate vwap? and/or MVWAP? (does this help anticipate enough?)
+
+    cex_ask = float(cex_df[cex_df['type'] == 'asks'].price)
+    dex_ask = float(bts_df[bts_df['type'] == 'asks'].price)
+
+    cex_bid = float(cex_df[cex_df['type'] == 'bids'].price)
+    dex_bid = float(bts_df[bts_df['type'] == 'bids'].price)
+
+    if dex_ask > cex_ask:
+        log.info("take cex ask, make on dex")
+        print("cex ask: ", cex_ask, "bts ask: ", dex_ask)
+
+    if cex_bid > dex_bid:
+        log.info("take cex bid and list bid on dex")
+        print("cex bid: ", cex_bid, "dex bid: ", dex_bid)
+
+    # add fees! calculation
+
+
+
+
+def get_vwap(df, period):
+    """
+    @param df is the dataframe for an orderbook
+    There are five steps in calculating VWAP:
+    1. Calculate the Typical Price for the period. [(High + Low + Close)/3)]
+    2. Multiply the Typical Price by the period Volume (Typical Price x Volume)
+    3. Create a Cumulative Total of Typical Price. Cumulative(Typical Price x Volume)
+    4. Create a Cumulative Total of Volume. Cumulative(Volume)
+    5. Divide the Cumulative Totals.
+
+    VWAP = Cumulative(Typical Price x Volume) / Cumulative(Volume)
+    """
+    log.info("Calculating VWAP for specific period")
 
 
 
@@ -179,11 +212,12 @@ if __name__ == '__main__':
     plt.subplot(2,1,2)
     plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=10)
 
-    calculate_arb_opp(cex_df, bts_df)
-
+    calculate_arb_opp(cex_spread_df, bts_spread_df)
+"""
     plt.tight_layout()
     plt.show()
     input()
+"""
 
 
 
