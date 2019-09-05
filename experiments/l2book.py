@@ -79,31 +79,42 @@ def get_cex_data(l2, depth: int):
     return ob_df
 
 
-def get_bts_orderbook_df(ob, type):
+def get_bts_orderbook_df(ob, type, vol2: bool):
     price_vol = list()
-    for i in range(len(ob[type])):
-        price = ob[type][i]['price']
-        invert_price = 1/price
-        vol = ob[type][i]['quote']
-        vol2 = ob[type][i]['base']  # is this the actual volume?
-        price_vol.append([price, vol['amount'], vol2['amount'], invert_price])
+    if vol2:
+        for i in range(len(ob[type])):
+            price = ob[type][i]['price']
+            invert_price = 1/price
+            vol = ob[type][i]['quote']
+            vol2 = ob[type][i]['base']  # is this the actual volume?
+            price_vol.append([price, vol['amount'], vol2['amount'], invert_price])
 
-    df = pd.DataFrame(price_vol)
-    df.columns = ['price', 'vol', 'vol_base', 'invert']
+        df = pd.DataFrame(price_vol)
+        df.columns = ['price', 'vol', 'vol_base', 'invert']
+    else:
+        for i in range(len(ob[type])):
+            price = ob[type][i]['price']
+            invert_price = 1/price
+            vol = ob[type][i]['quote']
+            price_vol.append([price, vol['amount'], invert_price])
+        df = pd.DataFrame(price_vol)
+        df.columns = ['price', 'vol', 'invert']
+
     df['timestamp'] = int(time.time())
     df['type'] = type
     return df
 
 
 def get_bts_ob_data(bts_symbol, depth: int):
+    vol2 = False
     bts_market = Market(bts_symbol)
     # get bitshares order book for current market
     bts_orderbook = bts_market.orderbook(limit=depth)
-    ask_df = get_bts_orderbook_df(bts_orderbook, 'asks')
-    bid_df = get_bts_orderbook_df(bts_orderbook, 'bids')
+    ask_df = get_bts_orderbook_df(bts_orderbook, 'asks', vol2)
+    bid_df = get_bts_orderbook_df(bts_orderbook, 'bids', vol2)
     bts_df = pd.concat([ask_df, bid_df])
     bts_df.sort_values('price', inplace=True, ascending=False)
-    print(tabulate(bts_df, headers="keys"))
+#    print(tabulate(bts_df, headers="keys")) # print bts orderbook
 #    bts_df.to_csv("static-bts-ob.csv")
     return bts_df
 
@@ -201,6 +212,7 @@ if __name__ == '__main__':
 #    get_static_plot(symbol, bts_symbol, depth)
     get_dynamic_plot(symbol, bts_symbol,  depth)
 
+    # hold connection open.
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
     # can matplot lib update continously?
