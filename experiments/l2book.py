@@ -95,12 +95,12 @@ def get_bts_orderbook_df(ob, type):
     return df
 
 
-def get_bts_ob_data(bs_symbol, depth: int):
-    bs_market = Market(bs_symbol)
+def get_bts_ob_data(bts_symbol, depth: int):
+    bts_market = Market(bts_symbol)
     # get bitshares order book for current market
-    bs_orderbook = bs_market.orderbook(limit=depth)
-    ask_df = get_bts_orderbook_df(bs_orderbook, 'asks')
-    bid_df = get_bts_orderbook_df(bs_orderbook, 'bids')
+    bts_orderbook = bts_market.orderbook(limit=depth)
+    ask_df = get_bts_orderbook_df(bts_orderbook, 'asks')
+    bid_df = get_bts_orderbook_df(bts_orderbook, 'bids')
     bts_df = pd.concat([ask_df, bid_df])
     bts_df.sort_values('price', inplace=True, ascending=False)
     print(tabulate(bts_df, headers="keys"))
@@ -115,14 +115,8 @@ def get_bts_static_ob_data(df, depth: int):
     bid_df = df[df['type'] == 'bids']
     ask_head = ask_df.tail(depth)
     bid_head = bid_df.head(depth)
-#    print("-------- head of ask and bid --------")
-#    print(ask_head)
-#    print(bid_head)
-    ask_head = ask_head.sort_values(by='price', ascending=True)
+    ask_head = ask_head.sort_values(by='price', ascending=True) # flip so smallest on top
     bid_head = bid_head.sort_values(by='price')
-#    print(" ------ spread inner orders -------")
-#    print(ask_head)
-#    print(bid_head)
     complete_df = pd.concat([ask_head, bid_head])
     return complete_df
 
@@ -139,10 +133,7 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     # look at lowest ask and highest bid
     # if dex ask price is > cex ask,  take cex ask and sell on dex. (account for fees)
     # assumes spread on cex is narrower than dex
-    #
     # bids? if cex bid > dex bid, take cex bid and list bid on dex. (+ fees)
-    # calculate vwap? and/or MVWAP? (does this help anticipate enough?)
-
     cex_ask = float(cex_df[cex_df['type'] == 'asks'].price)
     dex_ask = float(bts_df[bts_df['type'] == 'asks'].price)
 
@@ -151,55 +142,27 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
 
     if dex_ask > cex_ask:
         log.info("take cex ask, make on dex")
+        # buy on cex, sell on dex at same price - fees
         print("cex ask: ", cex_ask, "bts ask: ", dex_ask)
 
     if cex_bid > dex_bid:
         log.info("take cex bid and list bid on dex")
         print("cex bid: ", cex_bid, "dex bid: ", dex_bid)
-
     # add fees! calculation
 
 
-
-
-def get_vwap(df, period):
-    """
-    @param df is the dataframe for an orderbook
-    There are five steps in calculating VWAP:
-    1. Calculate the Typical Price for the period. [(High + Low + Close)/3)]
-    2. Multiply the Typical Price by the period Volume (Typical Price x Volume)
-    3. Create a Cumulative Total of Typical Price. Cumulative(Typical Price x Volume)
-    4. Create a Cumulative Total of Volume. Cumulative(Volume)
-    5. Divide the Cumulative Totals.
-
-    VWAP = Cumulative(Typical Price x Volume) / Cumulative(Volume)
-    """
-    log.info("Calculating VWAP for specific period")
-
-
-
-
-if __name__ == '__main__':
-    # CEX orderbook from cointiger
-    symbol = 'BTC/USDT'
-    #symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
-
-    depth = 5
-    #symbol = 'BTS/BTC'
-#    l2_ob = get_test_l2ob(symbol) # dynamic data
-#    cex_df = get_cex_data(l2_ob, depth=depth) # dynamic data
-#    cex_df = get_cex_data(l2, depth=depth) # static data
-
+def get_static_plot(symbol: str, bts_symbol: str,  depth: int):
     """ get static data from file """
     file_name = 'cex_ob.txt'
     static_cex = read_dict(file_name)
     cex_df = get_cex_data(static_cex, depth=depth)  # static data
+    #    cex_df = get_cex_data(l2, depth=depth) # alternative static data
 
     plt.subplot(2,1,1)
     plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
     # bitshares order engine.  get_market_orders (or use pyBitshares direct)
-    #bs_symbol = "BTS/OPEN.BTC"  # keep same order as cex exchange.
-    bs_symbol = "OPEN.BTC/USD"
+    # keep same order of pair as cex exchange.
+
     bts_df = pd.read_csv('static_bts.csv') # static bts data
     bts_spread_df = get_bts_static_ob_data(bts_df, 1)
     print("----- bts spread df ------")
@@ -208,19 +171,44 @@ if __name__ == '__main__':
     print("----- cex spread df ------")
     print(cex_spread_df)
 
-#   bts_df = get_bts_ob_data(bs_symbol, depth=depth)
     plt.subplot(2,1,2)
-    plot_df(bts_df, title="bitshares dex", symbol=bs_symbol, invert=False, bar_width=10)
+    plot_df(bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
 
     calculate_arb_opp(cex_spread_df, bts_spread_df)
-"""
     plt.tight_layout()
     plt.show()
     input()
-"""
+
+
+def get_dynamic_plot(symbol: str, bts_symbol: str, depth: int):
+    """ get dynamic data"""
+    l2_ob = get_test_l2ob(symbol) # dynamic data
+    cex_df = get_cex_data(l2_ob, depth=depth) # dynamic data
+    bts_df = get_bts_ob_data(bts_symbol, depth=depth) # dynamic data
+    print("----- dynamic cex df ------")
+    print(cex_df)
+    print("----- dynamic bts df------")
+    print(bts_df)
 
 
 
+if __name__ == '__main__':
+    # CEX orderbook from cointiger
+    symbol = 'BTC/USDT'
+    bts_symbol = "OPEN.BTC/USD"
+    depth = 5
+
+#    get_static_plot(symbol, bts_symbol, depth)
+    get_dynamic_plot(symbol, bts_symbol,  depth)
+
+    # continously poll every 3 seconds or whatever rate limit
+    # to monitor for best opportunities
+    # can matplot lib update continously?
+    # use multiprocess module?
+
+
+
+# symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
 # Useful https://robertmitchellv.com/blog-bar-chart-annotations-pandas-mpl.html
 # https://stackoverflow.com/questions/13187778/convert-pandas-dataframe-to-numpy-array
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.bar.html
