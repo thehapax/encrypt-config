@@ -50,6 +50,13 @@ def get_exchange(config_sections):
     return ccxt_ex
 
 
+def get_ccxt_module():
+    config_sections = get_exchange_config()
+    log.info(config_sections)
+    ccxt_ex = get_exchange(config_sections)
+    return ccxt_ex
+
+
 def get_test_l2ob(symbol):
     config_sections = get_exchange_config()
     log.info(config_sections)

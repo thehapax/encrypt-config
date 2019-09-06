@@ -3,12 +3,16 @@ from matplotlib import interactive
 
 import pandas as pd
 from tabulate import tabulate
-from ccxt_exchange_test import get_test_l2ob, read_dict
+from ccxt_exchange_test import get_test_l2ob, read_dict, get_ccxt_module
 from static_ob import l2
+
+from bitshares import BitShares
+from bitshares.instance import set_shared_bitshares_instance
 from bitshares.market import Market
+from bitshares.price import Price
+from bitshares.amount import Amount
 import time
 import logging
-import json
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
@@ -105,9 +109,9 @@ def get_bts_orderbook_df(ob, type, vol2: bool):
     return df
 
 
-def get_bts_ob_data(bts_symbol, depth: int):
+def get_bts_ob_data(bts_market, depth: int):
     vol2 = False
-    bts_market = Market(bts_symbol)
+
     # get bitshares order book for current market
     bts_orderbook = bts_market.orderbook(limit=depth)
     ask_df = get_bts_orderbook_df(bts_orderbook, 'asks', vol2)
@@ -191,16 +195,30 @@ def get_static_plot(symbol: str, bts_symbol: str,  depth: int):
     input()
 
 
-def get_dynamic_plot(symbol: str, bts_symbol: str, depth: int):
+def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
     """ get dynamic data"""
-    l2_ob = get_test_l2ob(symbol) # dynamic data
+    #  l2_ob = get_test_l2ob(symbol) # dynamic data
+    l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
     cex_df = get_cex_data(l2_ob, depth=depth) # dynamic data
-    bts_df = get_bts_ob_data(bts_symbol, depth=depth) # dynamic data
+
+    bts_df = get_bts_ob_data(bts_market, depth=depth) # dynamic data
     print("----- dynamic cex df ------")
     print(cex_df)
     print("----- dynamic bts df------")
     print(bts_df)
 
+
+def setup_bitshares_market(bts_symbol):
+    bitshares_instance = BitShares(
+        "wss://losangeles.us.api.bitshares.org/ws",
+        nobroadcast=True  # <<--- set this to False when you want to fire!
+    )
+    set_shared_bitshares_instance(bitshares_instance)
+    bts_market = Market(
+        bts_symbol,
+        bitshares_instance=bitshares_instance
+    )
+    return bts_market
 
 
 if __name__ == '__main__':
@@ -209,10 +227,13 @@ if __name__ == '__main__':
     bts_symbol = "OPEN.BTC/USD"
     depth = 5
 
-#    get_static_plot(symbol, bts_symbol, depth)
-    get_dynamic_plot(symbol, bts_symbol,  depth)
+    bts_market = setup_bitshares_market(bts_symbol)
+    ccxt_ex = get_ccxt_module()
 
-    # hold connection open.
+#    get_static_plot(symbol, bts_symbol, depth)
+    get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
+
+    # hold connection open for repolling cex
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
     # can matplot lib update continously?
