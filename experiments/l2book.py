@@ -1,16 +1,19 @@
 import matplotlib.pyplot as plt
 from matplotlib import interactive
 
+import multiprocessing as mp
+from multiprocessing import freeze_support
+
 import pandas as pd
 from tabulate import tabulate
 from ccxt_exchange_test import get_test_l2ob, read_dict, get_ccxt_module
-from static_ob import l2
 
 from bitshares import BitShares
 from bitshares.instance import set_shared_bitshares_instance
 from bitshares.market import Market
 from bitshares.price import Price
 from bitshares.amount import Amount
+
 import time
 import logging
 
@@ -19,6 +22,19 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(message)s'
 )
+
+def setup_bitshares_market(bts_symbol):
+    bitshares_instance = BitShares(
+        "wss://losangeles.us.api.bitshares.org/ws",
+        nobroadcast=True  # <<--- set this to False when you want to fire!
+    )
+    set_shared_bitshares_instance(bitshares_instance)
+    bts_market = Market(
+        bts_symbol,
+        bitshares_instance=bitshares_instance
+    )
+    return bts_market
+
 
 #plot_style = 'horizontal'
 plot_style = 'vertical'
@@ -111,7 +127,6 @@ def get_bts_orderbook_df(ob, type, vol2: bool):
 
 def get_bts_ob_data(bts_market, depth: int):
     vol2 = False
-
     # get bitshares order book for current market
     bts_orderbook = bts_market.orderbook(limit=depth)
     ask_df = get_bts_orderbook_df(bts_orderbook, 'asks', vol2)
@@ -121,19 +136,6 @@ def get_bts_ob_data(bts_market, depth: int):
 #    print(tabulate(bts_df, headers="keys")) # print bts orderbook
 #    bts_df.to_csv("static-bts-ob.csv")
     return bts_df
-
-
-def get_bts_static_ob_data(df, depth: int):
-    print("-------- Entire Static BTS Orderbook DF ------------")
-    print(tabulate(df, headers="keys"))
-    ask_df = df[df['type'] == 'asks']
-    bid_df = df[df['type'] == 'bids']
-    ask_head = ask_df.tail(depth)
-    bid_head = bid_df.head(depth)
-    ask_head = ask_head.sort_values(by='price', ascending=True) # flip so smallest on top
-    bid_head = bid_head.sort_values(by='price')
-    complete_df = pd.concat([ask_head, bid_head])
-    return complete_df
 
 
 def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
@@ -166,62 +168,22 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     # add fees! calculation
 
 
-def get_static_plot(symbol: str, bts_symbol: str,  depth: int):
-    """ get static data from file """
-    file_name = 'cex_ob.txt'
-    static_cex = read_dict(file_name)
-    cex_df = get_cex_data(static_cex, depth=depth)  # static data
-    #    cex_df = get_cex_data(l2, depth=depth) # alternative static data
-
-    plt.subplot(2,1,1)
-    plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
-    # bitshares order engine.  get_market_orders (or use pyBitshares direct)
-    # keep same order of pair as cex exchange.
-
-    bts_df = pd.read_csv('static_bts.csv') # static bts data
-    bts_spread_df = get_bts_static_ob_data(bts_df, 1)
-    print("----- bts spread df ------")
-    print(bts_spread_df)
-    cex_spread_df = get_cex_data(static_cex, depth=1)
-    print("----- cex spread df ------")
-    print(cex_spread_df)
-
-    plt.subplot(2,1,2)
-    plot_df(bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
-
-    calculate_arb_opp(cex_spread_df, bts_spread_df)
-    plt.tight_layout()
-    plt.show()
-    input()
-
-
 def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
     """ get dynamic data"""
-    #  l2_ob = get_test_l2ob(symbol) # dynamic data
     l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
     cex_df = get_cex_data(l2_ob, depth=depth) # dynamic data
-
     bts_df = get_bts_ob_data(bts_market, depth=depth) # dynamic data
+    
     print("----- dynamic cex df ------")
     print(cex_df)
     print("----- dynamic bts df------")
     print(bts_df)
 
 
-def setup_bitshares_market(bts_symbol):
-    bitshares_instance = BitShares(
-        "wss://losangeles.us.api.bitshares.org/ws",
-        nobroadcast=True  # <<--- set this to False when you want to fire!
-    )
-    set_shared_bitshares_instance(bitshares_instance)
-    bts_market = Market(
-        bts_symbol,
-        bitshares_instance=bitshares_instance
-    )
-    return bts_market
-
 
 if __name__ == '__main__':
+    freeze_support() # needed for multiprocessing
+
     # CEX orderbook from cointiger
     symbol = 'BTC/USDT'
     bts_symbol = "OPEN.BTC/USD"
@@ -230,10 +192,11 @@ if __name__ == '__main__':
     bts_market = setup_bitshares_market(bts_symbol)
     ccxt_ex = get_ccxt_module()
 
-#    get_static_plot(symbol, bts_symbol, depth)
+    # authenticate once: hold connection open for repolling cex continously
+
     get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
 
-    # hold connection open for repolling cex
+
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
     # can matplot lib update continously?
