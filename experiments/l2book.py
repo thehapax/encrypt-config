@@ -75,6 +75,23 @@ def plot_orderbook(ob_df, invert: bool, barwidth: float):
     return plt
 
 
+def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
+    plt = plot_orderbook(df, invert=invert, barwidth=bar_width)
+    plt.title(title + ":"+ symbol)
+    plt.ylabel('volume')
+    plt.xlabel('price')
+
+
+def plot_exchange_pair(cex_df, bts_df):
+    plt.subplot(2,1,1)
+    plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
+    plt.subplot(2,1,2)
+    plot_df(bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
+    plt.tight_layout()
+    plt.draw()
+    input()
+
+
 def get_cex_data(l2, depth: int):
     # let ob stand for orderbook, ob_depth is the order book depth we want to map out
 
@@ -138,13 +155,6 @@ def get_bts_ob_data(bts_market, depth: int):
     return bts_df
 
 
-def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
-    plt = plot_orderbook(df, invert=invert, barwidth=bar_width)
-    plt.title(title + ":"+ symbol)
-    plt.ylabel('volume')
-    plt.xlabel('price')
-
-
 def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     log.info("Calculate Arbitrage Opportunity")
     # look at lowest ask and highest bid
@@ -178,7 +188,18 @@ def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
     print(cex_df)
     print("----- dynamic bts df------")
     print(bts_df)
+    return cex_df, bts_df
 
+
+def spread_opp(bts_df, cex_df):
+#   bts_spread_df = get_bts_static_ob_data(bts_df, 1)
+    bts_spread_df = get_bts_ob_data(bts_df, 1)
+    print("----- bts spread df ------")
+    print(bts_spread_df)
+    cex_spread_df = get_cex_data(cex_df, depth=1)
+    print("----- cex spread df ------")
+    print(cex_spread_df)
+    calculate_arb_opp(cex_spread_df, bts_spread_df)
 
 
 if __name__ == '__main__':
@@ -191,11 +212,10 @@ if __name__ == '__main__':
 
     bts_market = setup_bitshares_market(bts_symbol)
     ccxt_ex = get_ccxt_module()
-
     # authenticate once: hold connection open for repolling cex continously
 
-    get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
-
+    cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
+    plot_exchange_pair(cex_df, bts_df)
 
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
@@ -209,3 +229,10 @@ if __name__ == '__main__':
 # https://stackoverflow.com/questions/13187778/convert-pandas-dataframe-to-numpy-array
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.bar.html
 
+"""
+pip install dash==0.42.0
+pip install dash-core-components==0.47.0
+pip install dash-html-components==0.16.0
+pip install dash-renderer==0.23.0
+pip install dash-table==3.6.0
+"""
