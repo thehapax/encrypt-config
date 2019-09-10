@@ -83,13 +83,13 @@ def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
 
 
 def plot_exchange_pair(cex_df, bts_df):
+    plt.cla()
+
     plt.subplot(2,1,1)
     plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
-    plt.subplot(2,1,2)
+    fig2 = plt.subplot(2,1,2)
     plot_df(bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
     plt.tight_layout()
-    plt.draw()
-    input()
 
 
 def get_cex_data(l2, depth: int):
@@ -203,8 +203,9 @@ def spread_opp(bts_df, cex_df):
 
 
 if __name__ == '__main__':
-    freeze_support() # needed for multiprocessing
+    plt.ion()
 
+    freeze_support() # needed for multiprocessing
     # CEX orderbook from cointiger
     symbol = 'BTC/USDT'
     bts_symbol = "OPEN.BTC/USD"
@@ -214,8 +215,13 @@ if __name__ == '__main__':
     ccxt_ex = get_ccxt_module()
     # authenticate once: hold connection open for repolling cex continously
 
-    cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
-    plot_exchange_pair(cex_df, bts_df)
+    for a in range(1, 5):
+        cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
+        plot_exchange_pair(cex_df, bts_df)
+        plt.pause(2)
+        plt.draw()
+
+
 
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
