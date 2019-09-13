@@ -1,11 +1,7 @@
 import matplotlib.pyplot as plt
-from matplotlib import interactive
-
-import multiprocessing as mp
 from multiprocessing import freeze_support
 
 import pandas as pd
-from tabulate import tabulate
 from ccxt_exchange_test import get_test_l2ob, read_dict, get_ccxt_module
 
 from bitshares import BitShares
@@ -39,14 +35,14 @@ def setup_bitshares_market(bts_symbol):
 #plot_style = 'horizontal'
 plot_style = 'vertical'
 
-def plot_h(plt, price, vol, bwidth, colors, align):
-    plt.barh(price, vol, bwidth, color=colors, align=align)
+def plot_h(ax, price, vol, bwidth, colors, align):
+    ax.barh(price, vol, bwidth, color=colors, align=align)
 
-def plot_v(plt, price, vol, bwidth, colors, align):
-    plt.bar(price, vol, bwidth, color=colors, align=align)
+def plot_v(ax, price, vol, bwidth, colors, align):
+    ax.bar(price, vol, bwidth, color=colors, align=align)
 
 
-def plot_orderbook(ob_df, invert: bool, barwidth: float):
+def plot_orderbook(ax, ob_df, invert: bool, barwidth: float):
     # get order book and visualize quickly with matplotlib.
     plt.style.use('ggplot')
     bwidth = barwidth
@@ -66,17 +62,17 @@ def plot_orderbook(ob_df, invert: bool, barwidth: float):
         plot_price = invert_price
 
     if plot_style is 'horizontal':
-        plot_h(plt, plot_price, vol, bwidth, ob_df.colors, 'center')
+        plot_h(ax, plot_price, vol, bwidth, ob_df.colors, 'center')
     else:
-        plot_v(plt, plot_price, vol, bwidth, ob_df.colors, 'center')
+        plot_v(ax, plot_price, vol, bwidth, ob_df.colors, 'center')
 
-    # use below if python 3.7, error with python 3.6.8
+    # use below line if python 3.7, error with python 3.6.8
     # plt.bar(ob_df.price, ob_df.vol, color=ob_df.colors)
     return plt
 
 
-def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
-    plt = plot_orderbook(df, invert=invert, barwidth=bar_width)
+def plot_df(ax1, df, title: str, symbol: str, invert: bool, bar_width: float):
+    plt = plot_orderbook(ax1, df, invert=invert, barwidth=bar_width)
     plt.title(title + ":"+ symbol)
     plt.ylabel('volume')
     plt.xlabel('price')
@@ -84,11 +80,11 @@ def plot_df(df, title: str, symbol: str, invert: bool, bar_width: float):
 
 def plot_exchange_pair(cex_df, bts_df):
     plt.cla()
-
-    plt.subplot(2,1,1)
-    plot_df(cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
-    fig2 = plt.subplot(2,1,2)
-    plot_df(bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
+    plt.figure()
+    ax1 = plt.subplot(2,1,1)
+    plot_df(ax1, cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
+    ax2 = plt.subplot(2,1,2)
+    plot_df(ax2, bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
     plt.tight_layout()
 
 
@@ -111,8 +107,6 @@ def get_cex_data(l2, depth: int):
 
     ob_df = pd.concat([ask_df.head(depth), bid_df.head(depth)])
     ob_df.sort_values('price', inplace=True, ascending=False)
-#   print("------- cex data --------")
-#   print(tabulate(ob_df, headers="keys"))
     return ob_df
 
 
@@ -150,8 +144,6 @@ def get_bts_ob_data(bts_market, depth: int):
     bid_df = get_bts_orderbook_df(bts_orderbook, 'bids', vol2)
     bts_df = pd.concat([ask_df, bid_df])
     bts_df.sort_values('price', inplace=True, ascending=False)
-#    print(tabulate(bts_df, headers="keys")) # print bts orderbook
-#    bts_df.to_csv("static-bts-ob.csv")
     return bts_df
 
 
@@ -205,7 +197,8 @@ def spread_opp(bts_df, cex_df):
 if __name__ == '__main__':
     plt.ion()
 
-    freeze_support() # needed for multiprocessing
+    freeze_support() # needed for multiprocessing (if needed)
+
     # CEX orderbook from cointiger
     symbol = 'BTC/USDT'
     bts_symbol = "OPEN.BTC/USD"
@@ -215,12 +208,11 @@ if __name__ == '__main__':
     ccxt_ex = get_ccxt_module()
     # authenticate once: hold connection open for repolling cex continously
 
-    for a in range(1, 5):
+    for a in range(1, 10):
         cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
         plot_exchange_pair(cex_df, bts_df)
         plt.pause(2)
         plt.draw()
-
 
 
     # continously poll every 3 seconds or whatever rate limit
