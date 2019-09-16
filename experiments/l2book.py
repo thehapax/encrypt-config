@@ -79,8 +79,7 @@ def plot_df(ax1, df, title: str, symbol: str, invert: bool, bar_width: float):
 
 
 def plot_exchange_pair(cex_df, bts_df):
-    plt.cla()
-    plt.figure()
+    plt.clf() # clear figure
     ax1 = plt.subplot(2,1,1)
     plot_df(ax1, cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
     ax2 = plt.subplot(2,1,2)
@@ -195,8 +194,6 @@ def spread_opp(bts_df, cex_df):
 
 
 if __name__ == '__main__':
-    plt.ion()
-
     freeze_support() # needed for multiprocessing (if needed)
 
     # CEX orderbook from cointiger
@@ -208,19 +205,24 @@ if __name__ == '__main__':
     ccxt_ex = get_ccxt_module()
     # authenticate once: hold connection open for repolling cex continously
 
-    for a in range(1, 10):
-        cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
-        plot_exchange_pair(cex_df, bts_df)
-        plt.pause(2)
-        plt.draw()
+    # poll for arb opportunities continuously on market
+    #   for i in range(1, 5): # short test
+    while True:
+        try:
+            plt.ion() # interactive plot
+            cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
+            plot_exchange_pair(cex_df, bts_df)
+            plt.pause(2)
+            plt.draw()
+        except Exception as e:
+            print(e)
+            break
 
 
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
     # can matplot lib update continously?
     # use multiprocess module?
-
-
 
 # symbol = 'BTC/BitCNY', 'ETH/BitCNY', 'BTS/ETH'
 # Useful https://robertmitchellv.com/blog-bar-chart-annotations-pandas-mpl.html
