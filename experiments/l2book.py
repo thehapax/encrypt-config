@@ -81,7 +81,7 @@ def plot_df(ax1, df, title: str, symbol: str, invert: bool, bar_width: float):
 def plot_exchange_pair(cex_df, bts_df):
     plt.clf() # clear figure
     ax1 = plt.subplot(2,1,1)
-    plot_df(ax1, cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.3)
+    plot_df(ax1, cex_df, title="cex cointiger", symbol=symbol, invert=False, bar_width=0.1)
     ax2 = plt.subplot(2,1,2)
     plot_df(ax2, bts_df, title="bitshares dex", symbol=bts_symbol, invert=False, bar_width=10)
     plt.tight_layout()
@@ -146,6 +146,29 @@ def get_bts_ob_data(bts_market, depth: int):
     return bts_df
 
 
+def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
+    """ get dynamic data"""
+    l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
+    cex_df = get_cex_data(l2_ob, depth=depth)  # dynamic data
+    bts_df = get_bts_ob_data(bts_market, depth=depth)  # dynamic data
+    """
+    print("----- dynamic cex df ------")
+    print(cex_df)
+    print("----- dynamic bts df------")
+    print(bts_df)
+    """
+    return cex_df, bts_df
+
+
+def get_ordersize():
+    """
+    place holder for getting proposed order size based on reserves
+    available on exchange.
+    :return:
+    """
+    return 0.01
+
+
 def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     log.info("Calculate Arbitrage Opportunity")
     # look at lowest ask and highest bid
@@ -158,28 +181,34 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     cex_bid = float(cex_df[cex_df['type'] == 'bids'].price)
     dex_bid = float(bts_df[bts_df['type'] == 'bids'].price)
 
+    cex_spread = cex_ask - cex_bid
+    too_small = 10 # random number now, but how do we determine if spread too small
+    # percentage of asset?
+
+    if cex_spread < too_small:
+        return
+
     if dex_ask > cex_ask:
+        diff = dex_ask - cex_ask
+        size = get_ordersize()
+        # buy on cex 10189 for 0.01 btc
+        # sell on dex at 10399 for 0.01 btc.
+        # where dex lowest ask is 10400
+
+        my_dex_ask = dex_ask - 0.01*dex_ask # lower than ask by 1%
+        # check if my_dex_ask is not lower than highest bid
+
+        print("buy on cex at: ", cex_ask, "sell on dex at: ", my_dex_ask )
+
         log.info("take cex ask, make on dex")
         # buy on cex, sell on dex at same price - fees
         print("cex ask: ", cex_ask, "bts ask: ", dex_ask)
 
+    # todo below
     if cex_bid > dex_bid:
         log.info("take cex bid and list bid on dex")
         print("cex bid: ", cex_bid, "dex bid: ", dex_bid)
     # add fees! calculation
-
-
-def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
-    """ get dynamic data"""
-    l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
-    cex_df = get_cex_data(l2_ob, depth=depth) # dynamic data
-    bts_df = get_bts_ob_data(bts_market, depth=depth) # dynamic data
-    
-    print("----- dynamic cex df ------")
-    print(cex_df)
-    print("----- dynamic bts df------")
-    print(bts_df)
-    return cex_df, bts_df
 
 
 def spread_opp(bts_df, cex_df):
@@ -229,10 +258,3 @@ if __name__ == '__main__':
 # https://stackoverflow.com/questions/13187778/convert-pandas-dataframe-to-numpy-array
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.bar.html
 
-"""
-pip install dash==0.42.0
-pip install dash-core-components==0.47.0
-pip install dash-html-components==0.16.0
-pip install dash-renderer==0.23.0
-pip install dash-table==3.6.0
-"""
