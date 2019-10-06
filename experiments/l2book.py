@@ -151,6 +151,7 @@ def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
     l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
     cex_df = get_cex_data(l2_ob, depth=depth)  # dynamic data
     bts_df = get_bts_ob_data(bts_market, depth=depth)  # dynamic data
+
     """
     print("----- dynamic cex df ------")
     print(cex_df)
@@ -186,7 +187,8 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     # percentage of asset?
 
     if cex_spread < too_small:
-        return
+        print("cex spread too small: ", cex_spread)
+   #     return
 
     if dex_ask > cex_ask:
         diff = dex_ask - cex_ask
@@ -195,14 +197,17 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
         # sell on dex at 10399 for 0.01 btc.
         # where dex lowest ask is 10400
 
-        my_dex_ask = dex_ask - 0.01*dex_ask # lower than ask by 1%
-        # check if my_dex_ask is not lower than highest bid
+        print("profit opportunity for ask trade: ",  diff, "difference * vol =", diff*size)
 
+        my_dex_ask = dex_ask - 0.001*dex_ask # make yours lower than lowest ask by 0.1%
+        # make sure that my_dex_ask is crossing into bid? (or should it?)
+
+        # check if my_dex_ask is not lower than highest bid
         print("buy on cex at: ", cex_ask, "sell on dex at: ", my_dex_ask )
 
-        log.info("take cex ask, make on dex")
+#        log.info("take cex ask, make on dex")
         # buy on cex, sell on dex at same price - fees
-        print("cex ask: ", cex_ask, "bts ask: ", dex_ask)
+#        print("cex ask: ", cex_ask, "bts ask: ", dex_ask)
 
     # todo below
     if cex_bid > dex_bid:
@@ -211,19 +216,8 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
     # add fees! calculation
 
 
-def spread_opp(bts_df, cex_df):
-#   bts_spread_df = get_bts_static_ob_data(bts_df, 1)
-    bts_spread_df = get_bts_ob_data(bts_df, 1)
-    print("----- bts spread df ------")
-    print(bts_spread_df)
-    cex_spread_df = get_cex_data(cex_df, depth=1)
-    print("----- cex spread df ------")
-    print(cex_spread_df)
-    calculate_arb_opp(cex_spread_df, bts_spread_df)
-
-
 if __name__ == '__main__':
-    freeze_support() # needed for multiprocessing (if needed)
+    freeze_support()  #needed for multiprocessing (if needed)
 
     # CEX orderbook from cointiger
     symbol = 'BTC/USDT'
@@ -240,6 +234,11 @@ if __name__ == '__main__':
         try:
             plt.ion() # interactive plot
             cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market,  depth)
+
+            cex_spread_df = cex_df[cex_df.index == 0]
+            bts_spread_df = bts_df[bts_df.index == 0]
+            calculate_arb_opp(cex_spread_df, bts_spread_df)
+
             plot_exchange_pair(cex_df, bts_df)
             plt.pause(2)
             plt.draw()
