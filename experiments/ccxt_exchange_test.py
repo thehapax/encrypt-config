@@ -96,24 +96,22 @@ if __name__ == '__main__':
     log.info(config_sections)
     ccxt_ex = get_exchange(config_sections)
 
-    log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
-    l2_ob = get_test_l2ob(symbol, ccxt_ex)
-
-    l2_ob = ccxt_ex.fetch_order_book(symbol=symbol, limit=None)
-
+#    log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
+#    l2_ob = get_test_l2ob(symbol, ccxt_ex)
+#    l2_ob = ccxt_ex.fetch_order_book(symbol=symbol, limit=None)
 
     print("Free Balance")
-    print(ccxt_ex.fetch_free_balance())
+    free_bal = ccxt_ex.fetch_free_balance()
+    bts_free = free_bal['BTS']
+
 
     log.info(f"Fetch my trades {symbol}: Trades: {ccxt_ex.fetch_my_trades(symbol)}\n")
 
     print("Fetch Open Orders")
     print(ccxt_ex.fetch_open_orders(symbol=symbol))
 
-    print("Fetch trading fees")
-    print(ccxt_ex.fetch_trading_fees())
-
-
+#    print("Fetch trading fees")
+#    print(ccxt_ex.fetch_trading_fees())
 
 
 #    log.info(f"Available Methods from ccxt for this exchange {list(ccxt_ex.method_list)}\n")
