@@ -1,6 +1,4 @@
 import matplotlib.pyplot as plt
-from multiprocessing import freeze_support
-
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
@@ -11,6 +9,8 @@ from bitshares.instance import set_shared_bitshares_instance
 from bitshares.market import Market
 from bitshares.price import Price
 from bitshares.amount import Amount
+
+from multiprocessing import freeze_support
 
 import time
 import logging
@@ -95,14 +95,12 @@ def get_cex_data(l2, depth: int):
     bids = l2['bids']
     bid_df = pd.DataFrame(bids)
     bid_df.columns = ['price', 'vol']
-    bid_df['invert'] = 1/bid_df['price']
     bid_df['timestamp'] = l2['timestamp']
     bid_df['type'] = 'bids'
 
     ask = l2['asks']
     ask_df = pd.DataFrame(ask)
     ask_df.columns = ['price', 'vol']
-    ask_df['invert'] = 1/ask_df['price']
     ask_df['timestamp'] = l2['timestamp']
     ask_df['type'] = 'asks'
 
@@ -158,12 +156,6 @@ def get_dynamic_data(ccxt_ex, symbol: str, bts_market, depth: int):
     cex_df.sort_values('price', inplace=True, ascending=False)
 
     bts_df = get_bts_ob_data(bts_market, depth=depth)  # dynamic data
-
-#    print("----- dynamic cex df ------")
-#    print(cex_df)
-#    print("----- dynamic bts df------")
-#    print(bts_df)
-
     return cex_df, bts_df
 
 
@@ -229,6 +221,11 @@ def get_cex_mirror(asks_df, bids_df, asks_bal, bids_bal):
     :param bts_df: 
     :return:
     """
+    # normalize volue by placing [0,1] values into 'vol_scaled' column
+    scaler = MinMaxScaler()
+    asks_df['vol_scaled'] = scaler.fit_transform(asks_df['vol'].values.reshape(-1, 1))
+    bids_df['vol_scaled'] = scaler.fit_transform(bids_df['vol'].values.reshape(-1, 1))
+
     asks_total = asks_df['vol_scaled'].sum()
     bids_total = bids_df['vol_scaled'].sum()
 
@@ -242,29 +239,24 @@ def get_cex_mirror(asks_df, bids_df, asks_bal, bids_bal):
     asks_df['vol_scaled'] = asks_df['vol_scaled'].mul(asks_dist)
     bids_df['vol_scaled'] = bids_df['vol_scaled'].mul(bids_dist)
 
-    # isolate columns for dex orders
-#    asks_df = asks_df[['price', 'dex_vol']]
-#    bids_df = bids_df[['price', 'dex_vol']]
-
-    # remove zero value for dex_vol
-#   asks_df = asks_df[asks_df['dex_vol'] != 0]
-#   bids_df = bids_df[asks_df['dex_vol'] != 0]
-
-    print("------- Asks_DF DEX mirror 2 ------")
-    print(asks_df)
-    print("------- Bids_DF DEX mirror 2 ------")
-    print(bids_df)
+    # remove zero row values for dex_vol
+    asks_df = asks_df[asks_df['vol_scaled'] != 0]
+    bids_df = bids_df[bids_df['vol_scaled'] != 0]
 
     # return and place orders on dex.
     return asks_df, bids_df
 
 
-def get_charts():
-    plt.ion()  # interactive plot
-    cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market, depth)
+def single_trade_arb(cex_df, bts_df):
     cex_spread_df = cex_df[cex_df.index == 0]  # get closest bid/ask
     bts_spread_df = bts_df[bts_df.index == 0]
     calculate_arb_opp(cex_spread_df, bts_spread_df)
+
+
+def get_charts():
+    plt.ion()  # interactive plot
+    cex_df, bts_df = get_dynamic_data(ccxt_ex, symbol, bts_market, depth)
+    # single_trade_arb
     plot_exchange_pair(cex_df, bts_df)
     plt.pause(2)
     plt.draw()
@@ -286,44 +278,27 @@ if __name__ == '__main__':
    # print(ccxt_ex.fetch_free_balance())
 
     # authenticate once: hold connection open for repolling cex continously
-
     # poll for arb opportunities continuously on market
     #   for i in range(1, 5): # short test
     while True:
         try:
-
             l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
             asks, bids = get_cex_data(l2_ob, depth=10)  # dynamic data from cex only
 
             """ order mirroring """
-            asks.drop(columns=['invert'], inplace=True)
-            bids.drop(columns=['invert'], inplace=True)
-
-            scaler = MinMaxScaler()
             print("------- get cex mirror ------")
-            # normalize volue by placing [0,1] values into 'vol_scaled' column
-            asks['vol_scaled'] = scaler.fit_transform(asks['vol'].values.reshape(-1, 1))
-          #  print("------- Asks------")
-          #  print(asks)
-
-            bids['vol_scaled'] = scaler.fit_transform(bids['vol'].values.reshape(-1, 1))
-           # print("------- Bids ------")
-           # print(bids)
-
             # get cex modified mirror values for dex
             asks_df, bids_df = get_cex_mirror(asks, bids, ask_bal, bid_bal)
 
+            print("------- Asks_DF DEX mirror ------")
+            print(asks_df)
+            print("------- Bids_DF DEX mirror ------")
+            print(bids_df)
 
-#            print("------- Asks_DF DEX mirror ------")
-#            print(asks_df)
-#            print("------- Bids_DF DEX mirror ------")
-#            print(bids_df)
+            # todo: calculate percentage offset.
 
-            # calculate percentage offset.
-            # place the new_bts_orders on the bitshares dex
-
-            # check for existing orders, if orders
-            # remove old bts orders
+            # todo: check for existing orders, if orders, remove old bts orders
+            # todo #1 place the new_bts_orders on the bitshares dex
 
             # repeat after X time gap or other rule
             """ order mirroring """
