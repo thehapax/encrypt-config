@@ -30,6 +30,7 @@ def get_exchange_config():
         log.error(e)
         pass
 
+
 def get_exchange(config_sections):
     # need to fix below in order to check for for acceptable exchanges and parameters
     # for now, get 0th exchange
@@ -82,7 +83,7 @@ def read_dict(file_name):
 if __name__ == '__main__':
 
     symbol = 'BTC/USDT'
-#    symbol = 'BTS/BTC'
+    #    symbol = 'BTS/BTC'
     log.info("symbol: {} ".format(symbol))
     l2_ob = get_test_l2ob(symbol)
 
