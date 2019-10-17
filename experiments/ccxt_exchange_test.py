@@ -3,6 +3,9 @@ import os
 import configparser
 import ccxt
 import json
+#from ccxt_exchange import CcxtExchange
+#from ccxt_engine import CcxtOrderEngine
+
 
 """
     Temporary informal unit test for ccxt exchange
@@ -58,13 +61,7 @@ def get_ccxt_module():
     return ccxt_ex
 
 
-def get_test_l2ob(symbol):
-    config_sections = get_exchange_config()
-    log.info(config_sections)
-    ccxt_ex = get_exchange(config_sections)
-
-    # log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
-    # print(ccxt_ex.fetch_free_balance())
+def get_test_l2ob(symbol, ccxt_ex):
     l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
     return l2_ob
 
@@ -80,21 +77,70 @@ def read_dict(file_name):
     return static_ob
 
 
-if __name__ == '__main__':
-
-    symbol = 'BTC/USDT'
-    #    symbol = 'BTS/BTC'
-    log.info("symbol: {} ".format(symbol))
-    l2_ob = get_test_l2ob(symbol)
-
+def test_rw_ob(l2_ob):
+    # write order book to file.
+    # read order book from file
     file_name = 'cex_ob.txt'
     write_dict(l2_ob, file_name)
     static_ob = read_dict(file_name)
     print(static_ob)
 
-    """
-    ccxt_ex.fetch_free_balance()
+
+
+if __name__ == '__main__':
+
+    symbol = 'BTC/USDT'
+    #    symbol = 'BTS/BTC'
+
+    config_sections = get_exchange_config()
+    log.info(config_sections)
+    ccxt_ex = get_exchange(config_sections)
+
+    log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
+    l2_ob = get_test_l2ob(symbol, ccxt_ex)
+
+    l2_ob = ccxt_ex.fetch_order_book(symbol=symbol, limit=None)
+
+
+    print("Free Balance")
+    print(ccxt_ex.fetch_free_balance())
+
+    log.info(f"Fetch my trades {symbol}: Trades: {ccxt_ex.fetch_my_trades(symbol)}\n")
+
+    print("Fetch Open Orders")
+    print(ccxt_ex.fetch_open_orders(symbol=symbol))
+
+    print("Fetch trading fees")
+    print(ccxt_ex.fetch_trading_fees())
+
+
+
+
+#    log.info(f"Available Methods from ccxt for this exchange {list(ccxt_ex.method_list)}\n")
+
+"""
+    cx = CcxtExchange(exchange=ccxt_ex)
+    trade_executor = CcxtOrderEngine(cx)
 
     log.info(f"Available Methods from ccxt for this exchange {list(cx.method_list)}\n")
-    log.info(f"Fetch my trades {symbol}: Trades: {cx.fetch_my_trades(symbol)}\n")        
-    """
+    log.info(f"Available Free Balance: {cx.free_balance}\n")
+    log.info(f"Fetch my trades {symbol}: Trades: {cx.fetch_my_trades(symbol)}\n")
+
+    one_day = 24 * 60 * 60 * 1000  # in milliseconds
+    since = cx.exchange.milliseconds() - one_day  # last 24 hours in milliseconds
+    to = since + one_day
+    log.info(since)
+
+    log.info(f"fetch closed orders for {symbol}: {cx.fetch_closed_orders(symbol, since)}\n")
+
+    if cx.method_list['fetchClosedOrders']:
+        all_orders = cx.get_all_closed_orders_since_to(symbol, since, to)
+        log.info(f"Fetching All closed Orders for {symbol} since {since} to {to} \n")
+        log.info(all_orders)
+
+    l2 = cx.fetch_l2_order_book(symbol)
+    log.info(f"Fetching L2 Order Book: {cx.fetch_l2_order_book(symbol)}\n")
+
+    log.info(f"Fetching Order Book: {cx.fetch_order_book(symbol)}\n")
+
+"""
