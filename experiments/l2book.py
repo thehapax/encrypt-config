@@ -10,8 +10,6 @@ from bitshares.market import Market
 from bitshares.price import Price
 from bitshares.amount import Amount
 
-from multiprocessing import freeze_support
-
 import time
 import logging
 
@@ -271,21 +269,33 @@ if __name__ == '__main__':
     bid_bal = 10000 # USDT/bitUSD
     ask_bal = 10  #  BTC
 
+    # testing sample
+    b_symbol = 'BTS/BTC'
+    cex_pair = b_symbol.split('/')
+    ask_symbol = cex_pair[0]
+    bid_symbol = cex_pair[1]
+
     bts_market = setup_bitshares_market(bts_symbol)
     ccxt_ex = get_ccxt_module()
 
-   # print("Free Balance")
-   # print(ccxt_ex.fetch_free_balance())
+    print("Free Balance")
+    free_bal = ccxt_ex.fetch_free_balance()
+    ask_free = free_bal[ask_symbol]
+    bid_free = free_bal[bid_symbol]
+    print(f"CEX: [{ask_symbol}] ask: {ask_free}, [{bid_symbol}] bid: {bid_free}")
+
 
     # authenticate once: hold connection open for repolling cex continously
     # poll for arb opportunities continuously on market
     #   for i in range(1, 5): # short test
+    """
+    
     while True:
         try:
             l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
             asks, bids = get_cex_data(l2_ob, depth=10)  # dynamic data from cex only
 
-            """ order mirroring """
+            # order mirroring 
             print("------- get cex mirror ------")
             # get cex modified mirror values for dex
             asks_df, bids_df = get_cex_mirror(asks, bids, ask_bal, bid_bal)
@@ -301,13 +311,15 @@ if __name__ == '__main__':
             # todo #1 place the new_bts_orders on the bitshares dex
 
             # repeat after X time gap or other rule
-            """ order mirroring """
+            # order mirroring
 
         except Exception as e:
             print(e)
             break
+    """
 
 
+#############################
 
     # continously poll every 3 seconds or whatever rate limit
     # to monitor for best opportunities
