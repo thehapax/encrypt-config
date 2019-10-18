@@ -21,7 +21,7 @@ logging.basicConfig(
 
 def setup_bitshares_market(bts_symbol):
     bitshares_instance = BitShares(
-        "wss://losangeles.us.api.bitshares.org/ws",
+       "wss://losangeles.us.api.bitshares.org/ws",
         nobroadcast=True  # <<--- set this to False when you want to fire!
     )
     set_shared_bitshares_instance(bitshares_instance)
@@ -275,7 +275,7 @@ if __name__ == '__main__':
     ask_symbol = cex_pair[0]
     bid_symbol = cex_pair[1]
 
-    bts_market = setup_bitshares_market(bts_symbol)
+#    bts_market = setup_bitshares_market(bts_symbol)
     ccxt_ex = get_ccxt_module()
 
     print("Free Balance")
