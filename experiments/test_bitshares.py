@@ -2,6 +2,7 @@ from bitshares import BitShares
 from bitshares.instance import set_shared_bitshares_instance
 from bitshares.market import Market
 import pandas as pd
+import time
 
 
 def setup_bitshares_market(bts_symbol):
