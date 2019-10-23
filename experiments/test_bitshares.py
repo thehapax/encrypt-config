@@ -2,11 +2,15 @@ from bitshares import BitShares
 from bitshares.instance import set_shared_bitshares_instance
 from bitshares.market import Market
 import pandas as pd
-
+import time
 
 def setup_bitshares_market(bts_symbol):
     bitshares_instance = BitShares(
-       "wss://losangeles.us.api.bitshares.org/ws",
+        "wss://siliconvalley.us.api.bitshares.org/ws",
+#        "wss://master.us.api.bitshares.org/ws",
+#        "wss://new-york.us.api.bitshares.org/ws",
+#        "wss://bts-api.lafona.net/ws",
+#        "wss://losangeles.us.api.bitshares.org/ws",
         nobroadcast=True  # <<--- set this to False when you want to fire!
     )
     set_shared_bitshares_instance(bitshares_instance)
