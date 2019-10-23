@@ -7,7 +7,7 @@ import time
 
 def setup_bitshares_market(bts_symbol):
     bitshares_instance = BitShares(
-        "wss://losangeles.us.api.bitshares.org/ws",
+        "wss://siliconvalley.us.api.bitshares.org/ws",
         nobroadcast=True  # <<--- set this to False when you want to fire!
     )
     set_shared_bitshares_instance(bitshares_instance)
