@@ -110,11 +110,35 @@ if __name__ == '__main__':
     print("Fetch Open Orders")
     print(ccxt_ex.fetch_open_orders(symbol=symbol))
 
-#    print("Fetch trading fees")
-#    print(ccxt_ex.fetch_trading_fees())
+    print("ccxt method list ")
+    print(ccxt_ex.method_list())
+    
+    #   test buy and sell on cex exchanges    
+#    symbol = 'BTS'
+    buy_amt = 0.0001
+    buy_price = 1000000
+    since = time.time()-10000
+    
+    #   print("Fetch trading fees") # may not exist for some exchanges, check method_list
+    #   print(ccxt_ex.fetch_trading_fees())
+
+    
+    # ccxt_ex.create_buy_order(symbol, buy_amt, buy_price)
+    print(ccxt_ex.fetch_my_trades(symbol))
+    print(ccxt_ex.fetch_open_orders(symbol))
+    print(ccxt_ex.fetch_closed_orders(symbol, since))
+
+    # ccxt_ex.fetch_order(order_id)
+    # ccxt_ex.cancel_order(order_id)
+    #ccxt_ex.create_sell_order(symbol, sell_amt, sell_price)
+
+    # todo:
+    #    def get_all_closed_orders_since_to(self, symbol, since, to):
 
 
-#    log.info(f"Available Methods from ccxt for this exchange {list(ccxt_ex.method_list)}\n")
+
+
+#   log.info(f"Available Methods from ccxt for this exchange {list(ccxt_ex.method_list)}\n")
 
 """
     cx = CcxtExchange(exchange=ccxt_ex)

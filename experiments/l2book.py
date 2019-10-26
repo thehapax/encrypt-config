@@ -202,7 +202,7 @@ def calculate_arb_opp(cex_df, bts_df):  # calculate arbitrage opportunity
         print("buy on cex at: ", cex_ask, "sell on dex at: ", my_dex_ask )
 
 #        log.info("take cex ask, make on dex")
-        # buy on cex, sell on dex at same price - fees
+#        buy on cex, sell on dex at same price - fees
 #        print("cex ask: ", cex_ask, "bts ask: ", dex_ask)
 
     # todo below
@@ -284,12 +284,14 @@ if __name__ == '__main__':
     bid_free = free_bal[bid_symbol]
     print(f"CEX: [{ask_symbol}] ask: {ask_free}, [{bid_symbol}] bid: {bid_free}")
 
-
+    
     # authenticate once: hold connection open for repolling cex continously
     # poll for arb opportunities continuously on market
     #   for i in range(1, 5): # short test
-    """
+
     
+    """ 
+   
     while True:
         try:
             l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
