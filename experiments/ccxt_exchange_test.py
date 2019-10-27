@@ -3,10 +3,10 @@ import os
 import configparser
 import ccxt
 import json
-#from ccxt_exchange import CcxtExchange
+from ccxt_exchange import CcxtExchange
+import time
+
 #from ccxt_engine import CcxtOrderEngine
-
-
 """
     Temporary informal unit test for ccxt exchange
 """
@@ -62,7 +62,7 @@ def get_ccxt_module():
 
 
 def get_test_l2ob(symbol, ccxt_ex):
-    l2_ob = ccxt_ex.fetch_l2_order_book(symbol=symbol, limit=None)
+    l2_ob = cx.fetch_l2_order_book(symbol)
     return l2_ob
 
 
@@ -95,51 +95,60 @@ if __name__ == '__main__':
     config_sections = get_exchange_config()
     log.info(config_sections)
     ccxt_ex = get_exchange(config_sections)
-
+    cx = CcxtExchange(exchange=ccxt_ex)
+    
+    log.info(f"Available Free Balance: {cx.free_balance}\n")
+    
     log.info(f"Fetch Ticker for {symbol} : {ccxt_ex.fetch_ticker(symbol)}\n")
     l2_ob = get_test_l2ob(symbol, ccxt_ex)
-    l2_ob = ccxt_ex.fetch_order_book(symbol=symbol, limit=None)
+    l2_ob = cx.fetch_order_book(symbol)
 
     print("Free Balance:")
-    free_bal = ccxt_ex.fetch_free_balance()
+    free_bal = cx.free_balance
     bts_free = free_bal['BTS']
     print(f"BTS : {bts_free}")
 
     log.info(f"Fetch my trades {symbol}: Trades: {ccxt_ex.fetch_my_trades(symbol)}\n")
 
     print("Fetch Open Orders")
-    print(ccxt_ex.fetch_open_orders(symbol=symbol))
+    open_orders = ccxt_ex.fetch_open_orders(symbol=symbol)
 
     print("ccxt method list ")
-    print(ccxt_ex.method_list())
+    method_list = cx.method_list
+    log.info(f"Available Methods from ccxt for this exchange {method_list}")
     
-    #   test buy and sell on cex exchanges    
-#    symbol = 'BTS'
+    """
+    test buy and sell on cex exchanges
+    """
+
+#   symbol = 'BTS'
     buy_amt = 0.0001
     buy_price = 1000000
     since = time.time()-10000
     
     #   print("Fetch trading fees") # may not exist for some exchanges, check method_list
-    #   print(ccxt_ex.fetch_trading_fees())
+    #   print(cx.fetch_trading_fees())
 
     
     # ccxt_ex.create_buy_order(symbol, buy_amt, buy_price)
-    print(ccxt_ex.fetch_my_trades(symbol))
-    print(ccxt_ex.fetch_open_orders(symbol))
-    print(ccxt_ex.fetch_closed_orders(symbol, since))
+    print("fetch my trades:")
+    print(cx.fetch_my_trades(symbol))
 
-    # ccxt_ex.fetch_order(order_id)
-    # ccxt_ex.cancel_order(order_id)
-    #ccxt_ex.create_sell_order(symbol, sell_amt, sell_price)
+    print("fetch open orders:")
+    print(cx.fetch_open_orders(symbol))
+
+    print("fetch closed orders:")
+    print(cx.fetch_closed_orders(symbol, since))
+
+    # cx.fetch_order(order_id)
+    # cx.cancel_order(order_id)
+    # cx.create_sell_order(symbol, sell_amt, sell_price)
 
     # todo:
     #    def get_all_closed_orders_since_to(self, symbol, since, to):
 
 
-
-
-#   log.info(f"Available Methods from ccxt for this exchange {list(ccxt_ex.method_list)}\n")
-
+    
 """
     cx = CcxtExchange(exchange=ccxt_ex)
     trade_executor = CcxtOrderEngine(cx)
