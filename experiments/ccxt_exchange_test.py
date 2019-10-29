@@ -7,8 +7,13 @@ from ccxt_exchange import CcxtExchange
 import time
 import pandas as pd
 
+from datetime import datetime, timedelta, timezone
+
 """
     Temporary informal unit test for ccxt exchange
+    Note: 
+    Exchange time is 13 digit unix time based on milliseconds for timestamp. 
+    Divide by 1000 to convert to timestamp in python
 """
 
 log = logging.getLogger(__name__)
@@ -48,6 +53,8 @@ def get_exchange(config_sections):
         'timeout': 30000,
         'enableRateLimit': True,
         'verbose': False,
+        'precision': {'price':8,
+                      'amount':8,}
     })
     return ccxt_ex
 
@@ -96,13 +103,15 @@ def get_cex_data(l2, depth: int):
     bids = l2['bids']
     bid_df = pd.DataFrame(bids)
     bid_df.columns = ['price', 'vol']
-    bid_df['timestamp'] = l2['timestamp']
+    # bring down to second level precision not millisecond
+    bid_df['timestamp'] = int(l2['timestamp']/1000)
     bid_df['type'] = 'bids'
 
     ask = l2['asks']
     ask_df = pd.DataFrame(ask)
     ask_df.columns = ['price', 'vol']
-    ask_df['timestamp'] = l2['timestamp']
+    # bring down to second level precision not millisecond
+    ask_df['timestamp'] = int(l2['timestamp']/1000)
     ask_df['type'] = 'asks'
 
     return ask_df.head(depth), bid_df.head(depth)
@@ -112,8 +121,13 @@ def get_cex_data(l2, depth: int):
 if __name__ == '__main__':
 
     #symbol = 'BTC/USDT'
-    symbol = 'BTS/BTC'
+    #symbol = 'BTS/BTC'
     symbol = 'BTS/ETH'
+    bitshares_symbol = 'BTS/OPEN.ETH'
+
+    bid_symbol = symbol.split('/')[0]
+    ask_symbol = symbol.split('/')[1]
+    print(f'bid_symbol: {bid_symbol}, ask_symbol: {ask_symbol}')
 
     config_sections = get_exchange_config()
     log.info(config_sections)
@@ -121,77 +135,93 @@ if __name__ == '__main__':
     cx = CcxtExchange(exchange=ccxt_ex)
 
     log.info(f'symbol: {symbol}')
-    #test_print_orderbooks(symbol, cx)
+#   test_print_orderbooks(symbol, cx)
 
     l2_ob = ccxt_ex.fetch_l2_order_book(symbol)
     asks, bids = get_cex_data(l2_ob, depth=2)
     log.info(f'Asks:\n {asks}')
     log.info(f'Bids:\n {bids}')
 
-    log.info("CCXT method list ")
-    method_list = cx.method_list
-    log.info(f"Available Methods from ccxt for this exchange: {list(method_list)}")
+    bid_free = 0
+    ask_free = 0
 
-    log.info(f"Available Free Balance: {cx.free_balance}\n")
+    log.info(f"All Available Free Balance: {cx.free_balance}")
     free_bal = cx.free_balance
-    bts_free = free_bal['BTS']
-    log.info(f"BTS : {bts_free}")
 
-    log.info(f"Fetch my trades {symbol}: Trades: {ccxt_ex.fetch_my_trades(symbol)}\n")
+    try:
+        if bid_symbol in free_bal:
+            bid_free = free_bal[bid_symbol]
+            log.info(f"{bid_symbol} : {bid_free}")
+        if ask_symbol in free_bal:
+            ask_free = free_bal[ask_symbol]
+            log.info(f"{ask_symbol} : {ask_free}")
+    except exception as e:
+        log.error(f"error on bid or ask asset balance: {e}")
 
-    log.info("Fetch Open Orders")
-    open_orders = ccxt_ex.fetch_open_orders(symbol=symbol)
+
+    log.info(f'Price({ask_symbol}), Vol is Amount ({bid_symbol})  on cointiger exchange')
 
     """
     test buy and sell on cex exchanges
     """
-    buy_amt = 0.0001
-    buy_price = 1000000
-    since = time.time()-10000
-    
+    # test buy 5% of free balance
+    if bid_free > 0:
+        buy_amt = bid_free * 0.05
+        buy_price = asks['price'][0]  # take the lowest asking price for market buy
+        log.info(f"Buy Amount: {buy_amt}, Buy Price: {buy_price}")
+
+    # calculate Fees (Todo incomplete)
     # may not exist for some exchanges, check method_list
-    fees = cx.fetch_trading_fees()
-    log.info(f'Fetch Trading Fees: {fees}')
-    
-    # cx.create_buy_order(symbol, buy_amt, buy_price)
-    # cx.fetch_order(order_id)
+    method_list = list(cx.method_list)
+    # log.info(f"Available Methods from ccxt for this exchange: {list(method_list)}")
 
-    log.info(f'fetch my trades: {cx.fetch_my_trades(symbol)}')
-    log.info(f'fetch open orders: {cx.fetch_open_orders(symbol)}')
-    log.info(f'fetch closed orders: {cx.fetch_closed_orders(symbol, since)}')
+    fees = None
+    if 'fetchTradingFees' in method_list:
+        fees = cx.fetch_trading_fees()
+        log.info(f'Fetch Trading Fees: {fees}')
+    if fees is None:
+        log.info(f'Fees from exchange API is none, switching to manual fee')
 
-    # cx.create_sell_order(symbol, sell_amt, sell_price)
-    # cx.create_buy_order(symbol, sell_amt, sell_price)
+    log.info(f"Creating Market Buy Order: {symbol}, Amt: {buy_amt}, Price:{buy_price}")
+    # uncomment to execute test buy order
+#    order_id = cx.create_buy_order(symbol, buy_amt, buy_price)
+#    fetched_order = cx.fetch_order(order_id)
+#    log.info(f'fetched order: {fetched_order}')
 
-    # cx.cancel_order(order_id)
-    
+    my_trades = cx.fetch_my_trades(symbol)
+    log.info(f"Fetch my trades {symbol}: Trades:\n{my_trades}")
+
+    open_orders = cx.fetch_open_orders(symbol=symbol)
+    log.info(f"Fetch Open Orders: {symbol}:\n{open_orders}")
+
+    # Time management
+    orderbook_ts = asks['timestamp'][0]
+    log.info(f'Order book Timestamp {orderbook_ts}')
+    time_frame = 5  # how far back should we look in time.
+    now_ts = datetime.now(timezone.utc)
+    dt = now_ts - timedelta(minutes=time_frame)
+    since_ts = int(dt.replace(tzinfo=timezone.utc).timestamp())
+    log.info(f'Now Timestamp {now_ts.replace(tzinfo=timezone.utc).timestamp()},'
+             f'Time 15 minutes ago: {since_ts}')
+
+
+    # keep checking status of order
+    while True:
+        if 'fetchMyTrades' in method_list:
+            log.info(f'fetch my trades: {cx.fetch_my_trades(symbol)}')
+        if 'fetchOpenOrders' in method_list:
+            log.info(f'fetch open orders: {cx.fetch_open_orders(symbol)}')
+        if 'fetchClosedOrders' in method_list:
+            log.info(f'fetch closed orders: {cx.fetch_closed_orders(symbol, since_ts)}')
+
+
     # todo:
     #    def get_all_closed_orders_since_to(self, symbol, since, to):
+    #    cx.create_sell_order(symbol, sell_amt, sell_price)
+    #    cx.cancel_order(order_id)
 
-
-    
 """
-    cx = CcxtExchange(exchange=ccxt_ex)
-
-    log.info(f"Available Methods from ccxt for this exchange {list(cx.method_list)}\n")
-    log.info(f"Available Free Balance: {cx.free_balance}\n")
-    log.info(f"Fetch my trades {symbol}: Trades: {cx.fetch_my_trades(symbol)}\n")
-
-    one_day = 24 * 60 * 60 * 1000  # in milliseconds
-    since = cx.exchange.milliseconds() - one_day  # last 24 hours in milliseconds
-    to = since + one_day
-    log.info(since)
-
-    log.info(f"fetch closed orders for {symbol}: {cx.fetch_closed_orders(symbol, since)}\n")
-
-    if cx.method_list['fetchClosedOrders']:
         all_orders = cx.get_all_closed_orders_since_to(symbol, since, to)
         log.info(f"Fetching All closed Orders for {symbol} since {since} to {to} \n")
         log.info(all_orders)
-
-    l2 = cx.fetch_l2_order_book(symbol)
-    log.info(f"Fetching L2 Order Book: {cx.fetch_l2_order_book(symbol)}\n")
-
-    log.info(f"Fetching Order Book: {cx.fetch_order_book(symbol)}\n")
-
 """
