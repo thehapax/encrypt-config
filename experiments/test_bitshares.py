@@ -2,12 +2,16 @@ from bitshares import BitShares
 from bitshares.instance import set_shared_bitshares_instance
 from bitshares.market import Market
 import pandas as pd
-import time
+import time, os
+
+from ascii_graph import Pyasciigraph
+from ascii_graph.colors import *
 
 
 def setup_bitshares_market(bts_symbol):
     bitshares_instance = BitShares(
         "wss://siliconvalley.us.api.bitshares.org/ws",
+#        "wss://new-york.us.api.bitshares.org/ws",
         nobroadcast=True  # <<--- set this to False when you want to fire!
     )
     set_shared_bitshares_instance(bitshares_instance)
@@ -58,9 +62,36 @@ def get_bts_ob_data(bts_market, depth: int):
 
 if __name__ == '__main__':
 
-    depth = 10
+    depth = 5
     bts_symbol = "OPEN.BTC/USD"
     bts_market = setup_bitshares_market(bts_symbol)
-    bts_df = get_bts_ob_data(bts_market, depth=depth)
-    print(bts_symbol)
-    print(bts_df)
+
+    ob_color = {'asks': Red, 'bids': Gre, 'mirror_asks': Yel, 'mirror_bids': Blu}
+    os.environ['TZ'] = 'UTC'
+    time.tzset()
+    title = "Dynamic Graph: " + bts_symbol
+
+    graph = Pyasciigraph(
+        line_length=120,
+        min_graph_length=50,
+        separator_length=4,
+        multivalue=True,
+        human_readable='si',
+        float_format='{0:,.6f}',
+    )
+
+    while True:
+        # loop forever, keep getting latest order book and display
+        bts_df = get_bts_ob_data(bts_market, depth=depth)
+        df = bts_df[['price', 'vol', 'type']]
+
+        df.loc[df['type'] == 'asks', 'type'] = ob_color['asks']
+        df.loc[df['type'] == 'bids', 'type'] = ob_color['bids']
+        tuple_data = [tuple(x) for x in df.values]
+
+        os.system("clear")
+        print(time.ctime())
+        for line in graph.graph(label=title, data=tuple_data):
+            print(line)
+        print(bts_df)
+        time.sleep(2)
