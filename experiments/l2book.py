@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
-from ccxt_exchange_test import get_test_l2ob, read_dict, get_ccxt_module
+#from ccxt_exchange_test import get_test_l2ob, read_dict, get_ccxt_module
+from ccxt_exchange_test import read_dict, get_ccxt_module
 
 from bitshares import BitShares
 from bitshares.instance import set_shared_bitshares_instance
