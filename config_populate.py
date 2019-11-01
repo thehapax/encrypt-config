@@ -5,7 +5,7 @@ an idea of future config file format
 Simple Arb : A <-> B
 Triangular arb : A -> B -> C
 """
-simple_arb = ['strategy-type', 'exchange_name', 'api_key', 'secret']
+simple_arb = ['strategy-type', 'exchange_name', 'api_key', 'secret', 'fund-password']
 triangular_arb = ['strategy-type', 'Exchange_Name_A', 'api_key_A', 'secret-A',
                   'Exchange_Name_C', 'api_key_C', 'secret-C']
 
@@ -19,10 +19,10 @@ def add_section(strategy_name, strategy, parser):
 # get data from user, write config to file
 parser = configparser.ConfigParser()
 
-my_strategy = input("Name of strategy:")
+my_strategy = input("Name of Simple or Mirror Arb strategy:")
 add_section(my_strategy, simple_arb, parser)
 
-tristrategy = input("Name of strategy:")
+tristrategy = input("Name of Triangular strategy:")
 add_section(tristrategy, triangular_arb, parser)
 
 # write parser to file
