@@ -7,6 +7,6 @@ ccxt==1.17.434
 bitshares==0.3.2
 dash_core_components==0.33.0
 pandas==0.23.4
-cryptography==2.3
+cryptography==3.2
 scikit_learn==0.21.3
 tabulate==0.8.5
